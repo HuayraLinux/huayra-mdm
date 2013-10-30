@@ -31,3 +31,4 @@ debian/tmp/usr/share/pixmaps
 debian/tmp/usr/share/xsessions/ssh.desktop
 debian/init/mdm etc/init.d/
 debian/mdm.conf etc/init/
+debian/pam.d/* etc/pam.d/
