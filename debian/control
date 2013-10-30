@@ -3,7 +3,7 @@
 # Modifications should be made to debian/control.in instead.
 # This file is regenerated automatically in the clean target.
 
-Source: mdm
+Source: huayra-mdm
 Section: gnome
 Priority: optional
 Maintainer: Clement Lefebvre <root@linuxmint.com>
@@ -41,7 +41,7 @@ Build-Depends: libpam0g-dev,
                gnome-common
 Standards-Version: 3.9.0
 
-Package: mdm
+Package: huayra-mdm
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
@@ -58,7 +58,7 @@ Depends: ${shlibs:Depends},
          numlockx
 Recommends: whiptail | dialog,
             zenity,
-            mdm-themes,
+            huayra-mdm-themes,
             xserver-xorg
 Suggests: locales,
           pm-utils,
