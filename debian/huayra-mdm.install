@@ -14,7 +14,6 @@ debian/tmp/usr/bin
 debian/tmp/usr/lib/mdm
 debian/tmp/usr/lib/gtk-2.0/modules/*.so
 debian/tmp/usr/sbin/mdmsetup
-debian/tmp/usr/sbin/mdm-binary
 debian/tmp/usr/sbin/mdm usr/sbin/
 debian/tmp/usr/share/mdm/applications
 debian/tmp/usr/share/mdm/themes
