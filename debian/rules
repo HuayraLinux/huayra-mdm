@@ -71,10 +71,9 @@ binary-arch: build install
 	dh_install -a
 	# special environment settings should be done in /etc/default/mdm
 	mv debian/tmp/usr/sbin/mdm-binary debian/tmp/usr/sbin/mdm
-	cd debian/tmp/usr/sbin && rm -f mdm-restart mdm-safe-restart mdm-stop mdm-binary
-	chmod 755 debian/tmp/etc/mdm/Xsession
-	chmod 755 debian/mdm.conf
-	chmod 755 debian/init/mdm
+	cp debian/tmp/usr/sbin/mdm debian/huayra-mdm/usr/sbin/mdm
+	cd debian/huayra-mdm/usr/sbin && rm -f mdm-restart mdm-safe-restart mdm-stop
+	chmod 755 debian/huayra-mdm/etc/mdm/Xsession
 	dh_installdebconf -a
 	dh_installdocs -a
 	dh_installmenu -a
