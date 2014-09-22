@@ -52,7 +52,6 @@ Depends: ${shlibs:Depends},
          gir1.2-webkit-3.0,
          gir1.2-gtk-3.0,
          python,
-         mdm-themes
 Recommends: whiptail | dialog,
             zenity,
             huayra-mdm-themes,

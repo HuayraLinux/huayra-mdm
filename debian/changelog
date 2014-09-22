@@ -1,3 +1,9 @@
+huayra-mdm (1.6.9-1) unstable; urgency=medium
+
+  * quitando dependencia de mdm-themes
+
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Mon, 22 Sep 2014 13:04:55 -0300
+
 huayra-mdm (1.6.9) unstable; urgency=medium
 
   * merge con upstream 1.6.9
