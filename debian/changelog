@@ -1,3 +1,9 @@
+huayra-mdm (1.6.9) unstable; urgency=medium
+
+  * merge con upstream 1.6.9
+
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Mon, 22 Sep 2014 12:24:12 -0300
+
 huayra-mdm (1.3.7) unstable; urgency=low
 
   * merge con upstream 1.3.7
