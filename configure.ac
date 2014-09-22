@@ -2,7 +2,7 @@ AC_PREREQ(2.52)
 AC_INIT(daemon/mdm.h)
 
 AC_CONFIG_HEADERS(config.h)
-AM_INIT_AUTOMAKE(mdm,1.3.7)
+AM_INIT_AUTOMAKE(mdm,1.6.9)
 AC_CONFIG_MACRO_DIR([m4])
 AM_MAINTAINER_MODE
 AC_GNU_SOURCE
@@ -1240,6 +1240,7 @@ po/Makefile.in
 common/Makefile
 docs/Makefile
 config/Init
+config/SuperInit
 config/PreSession
 config/PostSession
 config/mdmprefetchlist

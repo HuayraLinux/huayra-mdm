@@ -43,6 +43,7 @@
 #include "misc.h"
 
 #include "mdm-common.h"
+#include "mdm-log.h"
 #include "mdm-socket-protocol.h"
 #include "mdm-daemon-config-keys.h"
 
@@ -53,7 +54,7 @@ gboolean DOING_MDM_DEVELOPMENT = FALSE;
 static WebKitWebView *webView;
 static gboolean webkit_ready = FALSE;
 static gchar * mdm_msg = "";
-
+static gchar *current_language;
 static GtkWidget *login;
 static guint err_box_clear_handler = 0;
 
@@ -73,6 +74,13 @@ extern GHashTable *sessnames;
 extern gchar *default_session;
 extern const gchar *current_session;
 extern gint mdm_timed_delay;
+
+enum {
+    MDM_BACKGROUND_NONE = 0,
+    MDM_BACKGROUND_IMAGE_AND_COLOR = 1,
+    MDM_BACKGROUND_COLOR = 2,
+    MDM_BACKGROUND_IMAGE = 3,
+};
 
 static void process_operation (guchar op_code, const gchar *args);
 static gboolean mdm_login_ctrl_handler (GIOChannel *source, GIOCondition cond, gint fd);
@@ -141,17 +149,19 @@ static char * html_encode(const char *string) {
     ret = str_replace(ret, ";", "&#59");
     ret = str_replace(ret, "<", "&#60");
     ret = str_replace(ret, ">", "&#62");
+    ret = str_replace(ret, "\n", "<br/>");
     return ret;
 }
 
 void webkit_execute_script(const gchar * function, const gchar * arguments) {
     if (webkit_ready) {
         gchar * tmp;
+
         if (arguments == NULL) {            
-            tmp = g_strdup_printf("%s()", function);            
+            tmp = g_strdup_printf("if ((typeof %s) === 'function') { %s(); }", function, function);
         }
         else {
-            tmp = g_strdup_printf("%s(\"%s\")", function, str_replace(arguments, "\n", ""));                            
+            tmp = g_strdup_printf("if ((typeof %s) === 'function') { %s(\"%s\"); }", function, function, str_replace(arguments, "\n", ""));
         }
         webkit_web_view_execute_script(webView, tmp);
         g_free (tmp);
@@ -161,21 +171,24 @@ void webkit_execute_script(const gchar * function, const gchar * arguments) {
 gboolean webkit_on_message(WebKitWebView *view, WebKitWebFrame *frame, gchar *message, gpointer user_data) {    
     gchar ** message_parts = g_strsplit (message, "###", -1);
     gchar * command = message_parts[0];
-    if (strcmp(command, "LOGIN") == 0) {
-        printf ("%c%s\n", STX, message_parts[1]);
+    if (strcmp(command, "LOGIN") == 0) {        
+        char string[255];        
+        sscanf(message, "LOGIN###%255[^\n]s", string);
+        printf ("%c%s\n", STX, string);
         fflush (stdout);
     }   
     else if (strcmp(command, "LANGUAGE") == 0) {
-        gchar *language = message_parts[1];
-        printf ("%c%c%c%c%s\n", STX, BEL, MDM_INTERRUPT_SELECT_LANG, 0, language);
-        fflush (stdout);
-        g_free (language);
+        current_language = message_parts[1];
+        //gchar *language = message_parts[1];
+        //printf ("%c%c%c%c%s\n", STX, BEL, MDM_INTERRUPT_SELECT_LANG, 0, language);
+        //fflush (stdout);
+        //g_free (language);
     }
     else if (strcmp(command, "SESSION") == 0) {
         current_session = message_parts[2];     
     }   
     else if (strcmp(command, "SHUTDOWN") == 0) {
-        if (mdm_wm_warn_dialog (_("Are you sure you want to Shut Down the computer?"), "", _("Shut _Down"), NULL, TRUE) == GTK_RESPONSE_YES) {
+        if (mdm_wm_warn_dialog (_("Are you sure you want to shut down the computer?"), "", _("Shut _Down"), NULL, TRUE) == GTK_RESPONSE_YES) {
             _exit (DISPLAY_HALT);
         }
     }
@@ -203,7 +216,7 @@ gboolean webkit_on_message(WebKitWebView *view, WebKitWebFrame *frame, gchar *me
     else if (strcmp(command, "QUIT") == 0) {
         gtk_main_quit();
     }   
-    else if (strcmp(command, "USER") == 0) {
+    else if (strcmp(command, "USER") == 0) {        
         printf ("%c%c%c%s\n", STX, BEL, MDM_INTERRUPT_SELECT_USER, message_parts[1]);
         fflush (stdout);
     }
@@ -212,6 +225,20 @@ gboolean webkit_on_message(WebKitWebView *view, WebKitWebFrame *frame, gchar *me
     }    
     return TRUE;
 }
+
+gboolean webkit_on_console_message (WebKitWebView *web_view, gchar *message, gint line, gchar *source_id, gpointer user_data) {
+    mdm_debug("webkit_on_console_message: line #%d '%s' '%s'.", line, source_id, message);
+    return FALSE;
+}
+
+gboolean webkit_on_error (WebKitWebView *web_view, WebKitWebFrame *web_frame, gchar *uri, GError *error, gpointer user_data) {
+    mdm_debug("webkit_on_error: '%s'.", error->message);  
+    return FALSE;
+}
+
+void webkit_on_resource_failed (WebKitWebView *web_view, WebKitWebFrame *web_frame, WebKitWebResource *web_resource, GError *error, gpointer user_data) {
+    mdm_debug("webkit_on_resource_failed: '%s' '%s'.", webkit_web_resource_get_uri (web_resource), error->message);
+}   
 
 void webkit_on_loaded(WebKitWebView *view, WebKitWebFrame *frame, gpointer user_data) {    
     GIOChannel *ctrlch; 
@@ -352,9 +379,7 @@ void mdm_login_session_init () {
         gchar * args = g_strdup_printf("%s\", \"%s", _("Last"), LAST_SESSION);
         webkit_execute_script("mdm_add_session", args);
         g_free (args);            
-    }
-
-    mdm_session_list_init ();
+    }    
 
     for (tmp = sessions; tmp != NULL; tmp = tmp->next) {
         MdmSession *session;
@@ -494,7 +519,7 @@ void process_operation (guchar op_code, const gchar *args) {
     gint dont_save_session = GTK_RESPONSE_YES;
     switch (op_code) {
 
-        case MDM_SETLOGIN:  
+        case MDM_SETLOGIN:
             webkit_execute_script("mdm_set_current_user", args);
             printf ("%c\n", STX);
             fflush (stdout);
@@ -633,8 +658,9 @@ void process_operation (guchar op_code, const gchar *args) {
                         break;
 
                     case SESSION_LOOKUP_USE_SWITCHDESK:
-                        firstmsg = g_strdup_printf (_("You have chosen %s for this session"), mdm_session_name (session));
-                        secondmsg = g_strdup_printf (_("If you wish to make %s the default for future sessions, run the 'switchdesk' utility (System->Desktop Switching Tool from the panel menu)."), mdm_session_name (session));
+                        //TODO Remove switchdesk..
+                        firstmsg = g_strdup_printf ("You have chosen %s for this session", mdm_session_name (session));
+                        secondmsg = g_strdup_printf ("If you wish to make %s the default for future sessions, run the 'switchdesk' utility (System->Desktop Switching Tool from the panel menu).", mdm_session_name (session));
                         mdm_wm_message_dialog (firstmsg, secondmsg);
                         g_free (firstmsg);
                         g_free (secondmsg);
@@ -657,8 +683,8 @@ void process_operation (guchar op_code, const gchar *args) {
             break;
 
         case MDM_LANG:
-            //mdm_lang_op_lang (args);
-            printf ("%c%s\n", STX, g_getenv("LANG"));
+            //mdm_lang_op_lang (args);            
+            printf ("%c%s\n", STX, current_language);
             fflush (stdout);
             break;
 
@@ -678,9 +704,42 @@ void process_operation (guchar op_code, const gchar *args) {
             fflush (stdout);
             break;
 
+        case MDM_SETSESS:
+            current_session = args;
+            gchar * session_file = g_strdup_printf("%s.desktop", args);
+            gchar * wargs = g_strdup_printf("%s\", \"%s", mdm_session_name(session_file), session_file);
+            webkit_execute_script("mdm_set_current_session", wargs);
+            g_free (wargs);
+            mdm_debug("mdm_verify_set_user_settings: mdm_set_current_session '%s'.", args);        
+            printf ("%c\n", STX);
+            fflush (stdout);
+            break;
+
         case MDM_SETLANG:
-            //mdm_lang_op_setlang (args);
-            webkit_execute_script("mdm_set_current_language", args);
+            if (args) { 
+                current_language = args;
+                char *name;
+                char *untranslated;
+                if (mdm_common_locale_is_displayable (args)) {
+                    name = mdm_lang_name (args, FALSE, TRUE, FALSE, FALSE);
+
+                    untranslated = mdm_lang_untranslated_name (args, TRUE);
+
+                    if (untranslated != NULL) {
+                        gchar * wargs = g_strdup_printf("%s\", \"%s", untranslated, args);
+                        webkit_execute_script("mdm_set_current_language", wargs);
+                        g_free (wargs);
+                    }
+                    else {
+                        gchar * wargs = g_strdup_printf("%s\", \"%s", name, args);
+                        webkit_execute_script("mdm_set_current_language", wargs);
+                        g_free (wargs);
+                    }       
+                }
+                g_free (name);
+                g_free (untranslated);
+            }
+            
             printf ("%c\n", STX);
             fflush (stdout);
             break;
@@ -901,15 +960,14 @@ static void webkit_init (void) {
         //mdm_common_setup_cursor (GDK_LEFT_PTR);
 
         gtk_dialog_run (GTK_DIALOG (dialog));
-        gtk_widget_destroy (dialog);
-        
-        g_free (theme_name);
+        gtk_widget_destroy (dialog);        
+
         g_free (theme_dir);
         g_free (theme_filename);
-        theme_name = "mdm";
-        theme_dir = g_strdup_printf("file:///usr/share/mdm/html-themes/%s/", theme_name);
-        theme_filename = g_strdup_printf("/usr/share/mdm/html-themes/%s/index.html", theme_name);
-        g_file_get_contents (theme_filename, &html, &file_length, NULL);
+
+        mdm_common_fail_greeter ("mdm_webkit: There was an error loading the theme '%s'", theme_name);
+
+        g_free (theme_name);                
             
     }
     
@@ -946,7 +1004,25 @@ static void webkit_init (void) {
     g_object_set (G_OBJECT(settings), "enable-webgl", TRUE, NULL);  
     g_object_set (G_OBJECT(settings), "enable-universal-access-from-file-uris", TRUE, NULL);    
     g_object_set (G_OBJECT(settings), "enable-developer-extras", TRUE, NULL);   
-    
+
+    int scale = 0;
+    gchar *out = NULL;
+    g_spawn_command_line_sync ("mdm-get-monitor-scale",
+                               &out,
+                               NULL,
+                               NULL,
+                               NULL);
+    if (out) {
+        scale = atoi (out);
+        scale = CLAMP (scale, 1, 2);
+        g_free (out);
+    }
+
+    if (scale > 1) {
+        g_object_set (G_OBJECT(webView), "full-content-zoom", TRUE, NULL);
+        webkit_web_view_set_zoom_level (webView, (float) scale);
+    }
+
     webkit_web_view_set_settings (WEBKIT_WEB_VIEW(webView), settings);  
     webkit_web_view_set_transparent (webView, TRUE);
     
@@ -954,7 +1030,127 @@ static void webkit_init (void) {
 
     g_signal_connect(G_OBJECT(webView), "script-alert", G_CALLBACK(webkit_on_message), NULL);
     g_signal_connect(G_OBJECT(webView), "load-finished", G_CALLBACK(webkit_on_loaded), NULL);
+    g_signal_connect(G_OBJECT(webView), "load-error", G_CALLBACK(webkit_on_error), NULL);
+    g_signal_connect(G_OBJECT(webView), "resource-load-failed", G_CALLBACK(webkit_on_resource_failed), NULL);
+    g_signal_connect(G_OBJECT(webView), "console-message", G_CALLBACK(webkit_on_console_message), NULL);
     g_signal_connect(G_OBJECT(webView), "navigation-policy-decision-requested", G_CALLBACK(webkit_on_navigation_policy_decision_requested), NULL);
+}
+
+
+static GdkPixbuf *
+render_scaled_back (const GdkPixbuf *pb)
+{
+    int i;
+    int width, height;
+
+    GdkPixbuf *back = gdk_pixbuf_new (GDK_COLORSPACE_RGB,
+                      gdk_pixbuf_get_has_alpha (pb),
+                      8,
+                      gdk_screen_width (),
+                      gdk_screen_height ());
+
+    width = gdk_pixbuf_get_width (pb);
+    height = gdk_pixbuf_get_height (pb);
+
+    for (i = 0; i < mdm_wm_num_monitors; i++) {
+        gdk_pixbuf_scale (pb, back,
+                  mdm_wm_all_monitors[i].x,
+                  mdm_wm_all_monitors[i].y,
+                  mdm_wm_all_monitors[i].width,
+                  mdm_wm_all_monitors[i].height,
+                  mdm_wm_all_monitors[i].x /* offset_x */,
+                  mdm_wm_all_monitors[i].y /* offset_y */,
+                  (double) mdm_wm_all_monitors[i].width / width,
+                  (double) mdm_wm_all_monitors[i].height / height,
+                  GDK_INTERP_BILINEAR);
+    }
+
+    return back;
+}
+
+static void
+add_color_to_pb (GdkPixbuf *pb, GdkColor *color)
+{
+    int width = gdk_pixbuf_get_width (pb);
+    int height = gdk_pixbuf_get_height (pb);
+    int rowstride = gdk_pixbuf_get_rowstride (pb);
+    guchar *pixels = gdk_pixbuf_get_pixels (pb);
+    gboolean has_alpha = gdk_pixbuf_get_has_alpha (pb);
+    int i;
+    int cr = color->red >> 8;
+    int cg = color->green >> 8;
+    int cb = color->blue >> 8;
+
+    if ( ! has_alpha)
+        return;
+
+    for (i = 0; i < height; i++) {
+        int ii;
+        guchar *p = pixels + (rowstride * i);
+        for (ii = 0; ii < width; ii++) {
+            int r = p[0];
+            int g = p[1];
+            int b = p[2];
+            int a = p[3];
+
+            p[0] = (r * a + cr * (255 - a)) >> 8;
+            p[1] = (g * a + cg * (255 - a)) >> 8;
+            p[2] = (b * a + cb * (255 - a)) >> 8;
+            p[3] = 255;
+
+            p += 4;
+        }
+    }
+}
+
+
+/* setup background color/image */
+static void
+setup_background (void)
+{
+    GdkColor color;
+    GdkPixbuf *pb = NULL;
+    gchar *bg_color = mdm_config_get_string (MDM_KEY_BACKGROUND_COLOR);
+    gchar *bg_image = mdm_config_get_string (MDM_KEY_BACKGROUND_IMAGE);
+    gint   bg_type  = mdm_config_get_int    (MDM_KEY_BACKGROUND_TYPE); 
+
+    if ((bg_type == MDM_BACKGROUND_IMAGE ||
+         bg_type == MDM_BACKGROUND_IMAGE_AND_COLOR) &&
+        ! ve_string_empty (bg_image))
+        pb = gdk_pixbuf_new_from_file (bg_image, NULL);
+
+    /* Load background image */
+    if (pb != NULL) {
+        if (gdk_pixbuf_get_has_alpha (pb)) {
+            if (bg_type == MDM_BACKGROUND_IMAGE_AND_COLOR) {
+                if (bg_color == NULL ||
+                    bg_color[0] == '\0' ||
+                    ! gdk_color_parse (bg_color,
+                           &color)) {
+                    gdk_color_parse ("#000000", &color);
+                }
+                add_color_to_pb (pb, &color);
+            }
+        }
+        
+        GdkPixbuf *spb = render_scaled_back (pb);
+        g_object_unref (G_OBJECT (pb));
+        pb = spb;       
+
+        /* paranoia */
+        if (pb != NULL) {
+            mdm_common_set_root_background (pb);
+            g_object_unref (G_OBJECT (pb));
+        }
+    /* Load background color */
+    } else if (bg_type != MDM_BACKGROUND_NONE &&
+               bg_type != MDM_BACKGROUND_IMAGE) {
+        mdm_common_setup_background_color (bg_color);
+    /* Load default background */
+    } else {
+        gchar *blank_color = g_strdup ("#000000");
+        mdm_common_setup_background_color (blank_color);
+    }
 }
 
 static void mdm_login_gui_init (void) {      
@@ -1026,16 +1222,15 @@ int main (int argc, char *argv[]) {
     struct sigaction term;
     sigset_t mask;    
     guint sid;
-    char *bg_color;
 
     if (g_getenv ("DOING_MDM_DEVELOPMENT") != NULL) {
         DOING_MDM_DEVELOPMENT = TRUE;
     }
 
-    bindtextdomain (GETTEXT_PACKAGE, GNOMELOCALEDIR);
+    bindtextdomain (GETTEXT_PACKAGE, "/usr/share/mdm/locale");
     bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
     textdomain (GETTEXT_PACKAGE);
-   
+
     gtk_init (&argc, &argv);
 
     mdm_common_log_init ();
@@ -1043,21 +1238,20 @@ int main (int argc, char *argv[]) {
     
     setlocale (LC_ALL, "");
 
-    mdm_wm_screen_init (mdm_config_get_int (MDM_KEY_XINERAMA_SCREEN));
-   
-    bg_color = mdm_config_get_string (MDM_KEY_GRAPHICAL_THEMED_COLOR);
-    if (ve_string_empty (bg_color)) {
-        bg_color = mdm_config_get_string (MDM_KEY_BACKGROUND_COLOR);
-    }
-    mdm_common_setup_background_color (bg_color);
+    mdm_wm_screen_init (mdm_config_get_string (MDM_KEY_PRIMARY_MONITOR));
+       
+    setup_background();
+
+    current_language = g_getenv("LANG");
        
     defface = mdm_common_get_face (NULL, mdm_config_get_string (MDM_KEY_DEFAULT_FACE), mdm_config_get_int (MDM_KEY_MAX_ICON_WIDTH), mdm_config_get_int (MDM_KEY_MAX_ICON_HEIGHT));
 
     if (! defface) {
-        mdm_common_warning ("mdmwebkit: Could not open DefaultImage: %s. Suspending face browser!", mdm_config_get_string (MDM_KEY_DEFAULT_FACE));
-    } else  {
-        mdm_users_init (&users, &users_string, NULL, defface, &size_of_users, TRUE, !DOING_MDM_DEVELOPMENT);
-    }
+        mdm_common_warning ("mdmwebkit: Could not open DefaultFace: %s!", mdm_config_get_string (MDM_KEY_DEFAULT_FACE));
+    } 
+
+    mdm_session_list_init ();
+    mdm_users_init (&users, &users_string, NULL, defface, &size_of_users, TRUE, !DOING_MDM_DEVELOPMENT);    
 
     webkit_init();
             
@@ -1091,7 +1285,7 @@ int main (int argc, char *argv[]) {
     sigaddset (&mask, SIGINT);
     
     if G_UNLIKELY (sigprocmask (SIG_UNBLOCK, &mask, NULL) == -1) {
-        mdm_common_fail_greeter (_("Could not set signal mask!"));
+        mdm_common_fail_greeter ("Could not set signal mask!");
     }
 
     /* if in timed mode, delay timeout on keyboard or menu
@@ -1126,8 +1320,20 @@ int main (int argc, char *argv[]) {
     gtk_widget_show_now (login);
 
     mdm_wm_center_window (GTK_WINDOW (login));    
+
+    /* can it ever happen that it'd be NULL here ??? */
+    if G_UNLIKELY (login->window != NULL) {
+        mdm_wm_init (GDK_WINDOW_XWINDOW (login->window));
+
+        /* Run the focus, note that this will work no matter what
+         * since mdm_wm_init will set the display to the gdk one
+         * if it fails */
+        mdm_wm_focus_window (GDK_WINDOW_XWINDOW (login->window));
+    }
    
     mdm_common_setup_cursor (GDK_LEFT_PTR);  
+    
+    mdm_wm_center_cursor ();
 
     gtk_main ();
 

@@ -4,6 +4,7 @@ debian/tmp/etc/mdm/Xsession                         etc/mdm
 debian/insserv.conf.d			etc
 debian/tmp/etc/dm
 debian/tmp/etc/mdm/Init
+debian/tmp/etc/mdm/SuperInit
 debian/tmp/etc/mdm/PreSession
 debian/tmp/etc/mdm/PostSession
 debian/tmp/etc/mdm/mdm.conf
@@ -17,11 +18,11 @@ debian/tmp/usr/sbin/mdmsetup
 debian/tmp/usr/sbin/mdm
 debian/tmp/usr/share/mdm/applications
 debian/tmp/usr/share/mdm/themes
-debian/tmp/usr/share/mdm/html-themes
 debian/tmp/usr/share/mdm/defaults.conf
 debian/tmp/usr/share/mdm/BuiltInSessions
 debian/tmp/usr/share/mdm/*.glade
 debian/tmp/usr/share/mdm/locale
+debian/tmp/usr/share/mdm/recovery
 debian/tmp/usr/share/gnome/help/mdm
 debian/tmp/usr/share/icons/hicolor
 debian/tmp/usr/share/locale

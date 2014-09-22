@@ -40,6 +40,7 @@
 #include "mdmconfig.h"
 
 #include "mdm-common.h"
+#include "mdm-log.h"
 
 typedef struct _MdmWindow MdmWindow;
 struct _MdmWindow {
@@ -74,15 +75,15 @@ static Atom XA_NET_WM_STRUT = 0;
 
 static int trap_depth = 0;
 
-GdkRectangle *mdm_wm_allscreens = NULL;
-int mdm_wm_screens = 0;
-GdkRectangle mdm_wm_screen = {0,0,0,0};
+GdkRectangle *mdm_wm_all_monitors = NULL;
+int mdm_wm_num_monitors = 0;
+GdkRectangle mdm_wm_screen = {0,0,0,0}; // This is the drawing area used by the greeter
 
 static Window strut_owners[4] = {None, None, None, None};
 static guint save_struts[4] = {0, 0, 0, 0};
 
 void 
-mdm_wm_screen_init (int cur_screen_num)
+mdm_wm_screen_init (gchar * monitor_plug_name)
 {
 	GdkScreen *screen;
 	int i;
@@ -94,37 +95,34 @@ mdm_wm_screen_init (int cur_screen_num)
 		mdm_wm_screen.width = gdk_screen_width () / 2 - 100;
 		mdm_wm_screen.height = gdk_screen_height () / 2 - 100;
 
-		mdm_wm_allscreens = g_new0 (GdkRectangle, 2);
-		mdm_wm_allscreens[0] = mdm_wm_screen;
-		mdm_wm_allscreens[1].x = gdk_screen_width () / 2;
-		mdm_wm_allscreens[1].y = gdk_screen_height () / 2;
-		mdm_wm_allscreens[1].width = gdk_screen_width () / 2;
-		mdm_wm_allscreens[1].height = gdk_screen_height () / 2;
-		mdm_wm_screens = 2;
+		mdm_wm_all_monitors = g_new0 (GdkRectangle, 2);
+		mdm_wm_all_monitors[0] = mdm_wm_screen;
+		mdm_wm_all_monitors[1].x = gdk_screen_width () / 2;
+		mdm_wm_all_monitors[1].y = gdk_screen_height () / 2;
+		mdm_wm_all_monitors[1].width = gdk_screen_width () / 2;
+		mdm_wm_all_monitors[1].height = gdk_screen_height () / 2;
+		mdm_wm_num_monitors = 2;
 		return;
 	}
 
 	screen = gdk_screen_get_default ();
 
-	mdm_wm_screens = gdk_screen_get_n_monitors (screen);
+	mdm_wm_num_monitors = gdk_screen_get_n_monitors (screen);
 
-	mdm_wm_allscreens = g_new (GdkRectangle, mdm_wm_screens);
-	for (i = 0; i < mdm_wm_screens; i++)
-		gdk_screen_get_monitor_geometry (screen, i, mdm_wm_allscreens + i);
+	mdm_wm_all_monitors = g_new (GdkRectangle, mdm_wm_num_monitors);
 
-	if (mdm_wm_screens < cur_screen_num)
-		cur_screen_num = 0;
+	int current_monitor_num = gdk_screen_get_primary_monitor (screen);
 
-	mdm_wm_screen = mdm_wm_allscreens[cur_screen_num];
-}
-
-void 
-mdm_wm_set_screen (int cur_screen_num)
-{
-	if (cur_screen_num >= mdm_wm_screens || cur_screen_num < 0)
-		cur_screen_num = 0;
-
-	mdm_wm_screen = mdm_wm_allscreens[cur_screen_num];
+	for (i = 0; i < mdm_wm_num_monitors; i++) {
+		gdk_screen_get_monitor_geometry (screen, i, mdm_wm_all_monitors + i);        
+		mdm_debug("mdm_wm_screen_init: Found monitor %d '%s'.", i, gdk_screen_get_monitor_plug_name (screen, i));
+		if (g_strcmp0(gdk_screen_get_monitor_plug_name (screen, i), monitor_plug_name) == 0) {
+			current_monitor_num = i;
+			mdm_debug("mdm_wm_screen_init: Using monitor '%s' to render greeter.", gdk_screen_get_monitor_plug_name (screen, i));
+		}
+	}
+	
+	mdm_wm_screen = mdm_wm_all_monitors[current_monitor_num];	
 }
 
 /* Not really a WM function, center a gtk window by setting uposition */
@@ -150,9 +148,7 @@ mdm_wm_center_window (GtkWindow *cw)
 void
 mdm_wm_center_cursor (void)
 {
-    XWarpPointer (wm_disp, None, wm_root, 0, 0, 0, 0, 
-		  mdm_wm_screen.x + mdm_wm_screen.width / 2,
-		  mdm_wm_screen.y + mdm_wm_screen.height / 2);
+    XWarpPointer (wm_disp, None, wm_root, 0, 0, 0, 0, mdm_wm_screen.x + mdm_wm_screen.width / 2, mdm_wm_screen.y + mdm_wm_screen.height / 2 + 20);
 }
 
 static void

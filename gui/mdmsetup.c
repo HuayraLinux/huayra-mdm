@@ -72,6 +72,9 @@ static gchar     *custom_config_file;
 /* Used to store all available sessions */
 static GList *sessions = NULL;
 
+/* Used to store all available monitors */
+static GList *monitors = NULL;
+
 enum {
 	THEME_COLUMN_SELECTED,	
 	THEME_COLUMN_DIR,
@@ -501,7 +504,7 @@ combobox_timeout (GtkWidget *combo_box)
 					if (mdm_user_uid (new_val) == 0)
 						str = g_strdup (_("Autologin or timed login to the root account is forbidden."));
 					else 
-						str = g_strdup_printf (_("The \"%s\" user UID is lower than allowed MinimalUID."), new_val);				
+						str = g_strdup_printf (_("The %s user UID is lower than 'MinimalUID'."), new_val);				
 					setup_dialog = glade_xml_get_widget(xml, "setup_dialog");
 										
 					dialog = hig_dialog_new (GTK_WINDOW (setup_dialog),
@@ -528,33 +531,6 @@ combobox_timeout (GtkWidget *combo_box)
 			mdm_setup_config_set_string (key, new_val);
 		}
 		g_free (new_val);
-	} 		
-	/* Use 24 clock combobox */
-	else if (strcmp (ve_sure_string (key), MDM_KEY_USE_24_CLOCK) == 0) {		
-		gchar *val;		
-		gchar *new_val;
-		
-		new_val = gtk_combo_box_get_active_text (GTK_COMBO_BOX (combo_box));
-		val     = mdm_config_get_string ((gchar *)key);
-
-		if (new_val) {
-                    if (strcmp (_(new_val), _("auto"))) {
-                       if (strcasecmp (ve_sure_string (val), "auto") != 0)
-                          mdm_setup_config_set_string (key, "auto");
-                    }
-                    else if (strcmp (_(new_val), _("yes"))) {
-                       if (strcasecmp (ve_sure_string (val), "true") != 0 &&
-                           strcasecmp (ve_sure_string (val), "yes") != 0)
-                          mdm_setup_config_set_string (key, "true");
-                    }
-                    else {
-                       if (strcasecmp (ve_sure_string (val), "false") != 0 &&
-                           strcasecmp (ve_sure_string (val), "no") != 0) 
-                           mdm_setup_config_set_string (key, "false");
-		    }
-		}
-		g_free (new_val);
-		g_free (val);
 	}	
 	/* Default session combobox*/
 	else if (strcmp (ve_sure_string (key), MDM_KEY_DEFAULT_SESSION) == 0) {
@@ -565,6 +541,26 @@ combobox_timeout (GtkWidget *combo_box)
 		
 		val = mdm_config_get_string ((gchar *)key);
 		new_val = g_strdup ((gchar*) g_list_nth_data (sessions, selected));
+		
+		if (strcmp (ve_sure_string (val), ve_sure_string (new_val)) != 0)
+			mdm_setup_config_set_string (key,  ve_sure_string (new_val));
+
+		g_free (new_val);
+		g_free (val);		
+	}
+	/* Primary monitor combobox*/
+	else if (strcmp (ve_sure_string (key), MDM_KEY_PRIMARY_MONITOR) == 0) {
+		/* First we get the selected index. Next we lookup the actual
+		   filename in the List of sessions */
+		gchar *val;
+		gchar *new_val = NULL;
+		
+		val = mdm_config_get_string ((gchar *)key);
+		new_val = g_strdup ((gchar*) g_list_nth_data (monitors, selected-1));
+
+		if (new_val == NULL || new_val == " ") {
+			new_val = "None";
+		}
 		
 		if (strcmp (ve_sure_string (val), ve_sure_string (new_val)) != 0)
 			mdm_setup_config_set_string (key,  ve_sure_string (new_val));
@@ -664,7 +660,7 @@ toggle_toggled_sensitivity_positive (GtkWidget *toggle, GtkWidget *depend)
 	gtk_widget_set_sensitive (depend, gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (toggle)));
 }
 
-static void
+static GtkWidget *
 setup_notify_toggle (const char *name,
 		     const char *key)
 {
@@ -737,6 +733,8 @@ setup_notify_toggle (const char *name,
 		g_signal_connect (G_OBJECT (toggle), "toggled",
 		                  G_CALLBACK (toggle_toggled), NULL);
 	}
+
+	return toggle;
 }
 
 static void
@@ -1947,7 +1945,7 @@ install_theme_file (gchar *filename, GtkListStore *store, GtkWindow *parent)
 		GtkWidget *dialog;
 		gchar *msg;
 
-		msg = g_strdup_printf (_("%s"), error);
+		msg = g_strdup_printf ("%s", error);
 
 		dialog = hig_dialog_new (GTK_WINDOW (parent),
 					 GTK_DIALOG_MODAL | 
@@ -2488,8 +2486,7 @@ delete_theme (GtkWidget *button, gpointer data)
 	dir = g_strdup (g_value_get_string (&value));
 	g_value_unset (&value);
 
-	s = g_strdup_printf (_("Remove the \"%s\" theme?"),
-			     name);
+	s = g_strdup_printf (_("Remove the %s theme?"), name);
 	dlg = hig_dialog_new (GTK_WINDOW (setup_dialog),
 			      GTK_DIALOG_MODAL | 
 			      GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -2671,46 +2668,6 @@ delete_html_theme (GtkWidget *button, gpointer data)
 
 	g_free (name);
 	g_free (dir);
-}
-
-static void
-setup_security_tab (void)
-{
-	GtkWidget *checkbox;
-	GtkWidget *label;
-
-	/* Setup user preselection */
-	setup_notify_toggle ("select_last_login", MDM_KEY_SELECT_LAST_LOGIN);
-
-	/* Setup Enable NumLock */
-	setup_notify_toggle ("enable_numlock", MDM_KEY_NUMLOCK);
-
-	/* Setup Local administrator login setttings */
-	setup_notify_toggle ("allowroot", MDM_KEY_ALLOW_ROOT);
-
-	/* Setup Enable debug message to system log */
-	setup_notify_toggle ("enable_debug", MDM_KEY_DEBUG);
-
-	/* Bold the Enable automatic login label */
-	checkbox = glade_xml_get_widget (xml, "autologin");
-	label = gtk_bin_get_child (GTK_BIN (checkbox));
-	g_object_set (G_OBJECT (label), "use_markup", TRUE, NULL);
-
-	/* Bold the Enable timed login label */
-	checkbox = glade_xml_get_widget (xml, "timedlogin");
-	label = gtk_bin_get_child (GTK_BIN (checkbox));
-	g_object_set (G_OBJECT (label), "use_markup", TRUE, NULL);
-
-	/* Setup Enable automatic login */
- 	setup_user_combobox ("autologin_combo",
-			     MDM_KEY_AUTOMATIC_LOGIN);
-	setup_notify_toggle ("autologin", MDM_KEY_AUTOMATIC_LOGIN_ENABLE);
-
-	/* Setup Enable timed login */
- 	setup_user_combobox ("timedlogin_combo",
-			     MDM_KEY_TIMED_LOGIN);
-	setup_intspin ("timedlogin_seconds", MDM_KEY_TIMED_LOGIN_DELAY);
-	setup_notify_toggle ("timedlogin", MDM_KEY_TIMED_LOGIN_ENABLE);	
 }
 
 static GList *
@@ -2901,7 +2858,6 @@ setup_local_themed_settings (void)
 	GtkTreeViewColumn *column;
 	GtkTreeSelection *selection;
 	GtkTreeIter *select_iter = NULL;
-	GtkWidget *color_colorbutton;
 	GtkWidget *style_label;
 	GtkWidget *theme_label;
 	GtkSizeGroup *size_group;
@@ -2916,15 +2872,7 @@ setup_local_themed_settings (void)
 	size_group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
 	gtk_size_group_add_widget (size_group, style_label);
 	gtk_size_group_add_widget (size_group, theme_label);
-	
-	color_colorbutton = glade_xml_get_widget (xml, "local_background_theme_colorbutton");
-
-	g_object_set_data (G_OBJECT (color_colorbutton), "key",
-	                   MDM_KEY_GRAPHICAL_THEMED_COLOR);
-
-	setup_greeter_color ("local_background_theme_colorbutton", 
-	                     MDM_KEY_GRAPHICAL_THEMED_COLOR);
-
+		
 	theme_dir = get_theme_dir ();
 
 	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (theme_list), TRUE);
@@ -3458,45 +3406,42 @@ setup_default_session (void)
 }
 
 static void
-setup_general_tab (void)
-{	
-	GtkWidget *clock_type_chooser;	
-	gchar *user_24hr_clock;	
-
-	/* Setup default session */
-	setup_default_session ();
-		
-	/* Setup user 24Hr Clock */
-	clock_type_chooser = glade_xml_get_widget (xml, "use_24hr_clock_combobox");
-
-	user_24hr_clock = mdm_config_get_string (MDM_KEY_USE_24_CLOCK);
-	if (!ve_string_empty (user_24hr_clock)) {
-		if (strcasecmp (ve_sure_string (user_24hr_clock), "auto") == 0) {
-			gtk_combo_box_set_active (GTK_COMBO_BOX (clock_type_chooser), CLOCK_AUTO);
-		}
-		else if (strcasecmp (ve_sure_string (user_24hr_clock), "yes") == 0 ||
-		         strcasecmp (ve_sure_string (user_24hr_clock), "true") == 0) {
-			gtk_combo_box_set_active (GTK_COMBO_BOX (clock_type_chooser), CLOCK_YES);
-		}
-		else if (strcasecmp (ve_sure_string (user_24hr_clock), "no") == 0 ||
-		         strcasecmp (ve_sure_string (user_24hr_clock), "true") == 0) {
-			gtk_combo_box_set_active (GTK_COMBO_BOX (clock_type_chooser), CLOCK_NO);
-		}
-	}
-	
-	g_object_set_data_full (G_OBJECT (clock_type_chooser), "key",
-	                        g_strdup (MDM_KEY_USE_24_CLOCK), (GDestroyNotify) g_free);
-	g_signal_connect (G_OBJECT (clock_type_chooser), "changed",
-	                  G_CALLBACK (combobox_changed), NULL);			
-	      	
-}
-
-static void
-setup_local_tab (void)
+setup_monitors (void)
 {
-	setup_local_plain_settings ();
-	setup_local_themed_settings ();
-	setup_local_html_themed_settings();
+	GtkWidget  *primary_monitor_combobox = glade_xml_get_widget (xml, "primary_monitor_combobox");
+	GtkWidget  *primary_monitor_label = glade_xml_get_widget (xml, "primary_monitor_label");
+
+	gtk_widget_set_sensitive (primary_monitor_combobox, TRUE);	
+	
+	GdkScreen *screen = gdk_screen_get_default ();
+	int mdm_wm_num_monitors = gdk_screen_get_n_monitors (screen);	
+
+	if (mdm_wm_num_monitors > 1) {
+		gint active = 0;
+		int i;
+		gchar * org_val = mdm_config_get_string (MDM_KEY_PRIMARY_MONITOR);
+		for (i = 0; i < mdm_wm_num_monitors; i++) {
+			char * plugname = gdk_screen_get_monitor_plug_name (screen, i);		
+			if (!ve_string_empty (plugname)) {			
+				gtk_combo_box_append_text (GTK_COMBO_BOX (primary_monitor_combobox), plugname);
+				monitors = g_list_prepend (monitors, plugname);
+				if (strcmp(plugname, org_val) == 0) {
+					active = i+1;				
+				}
+			}		
+		}
+		if (active > 0) {		
+			gtk_combo_box_set_active (GTK_COMBO_BOX (primary_monitor_combobox), active);
+		}
+		monitors = g_list_reverse (monitors);				
+		g_object_set_data_full (G_OBJECT (primary_monitor_combobox), "key", g_strdup (MDM_KEY_PRIMARY_MONITOR), (GDestroyNotify) g_free);
+		g_signal_connect (primary_monitor_combobox, "changed", G_CALLBACK (combobox_changed), NULL);	
+		g_free (org_val);
+	}
+	else {
+		gtk_widget_hide (primary_monitor_combobox);
+		gtk_widget_hide (primary_monitor_label);
+	}	
 }
 
 static GtkWidget *
@@ -3526,9 +3471,54 @@ setup_gui (void)
 	glade_helper_tagify_label (xml, "timedlogin", "b");	
 	
 	/* Setup preference tabs */
-	setup_general_tab ();
-	setup_local_tab (); 	
-	setup_security_tab ();	
+	setup_default_session();	
+	setup_monitors();
+	setup_local_plain_settings ();
+	setup_local_themed_settings ();
+	setup_local_html_themed_settings();	
+	
+	GtkWidget *checkbox;
+	GtkWidget *label;
+
+	/* Setup user preselection */
+	setup_notify_toggle ("select_last_login", MDM_KEY_SELECT_LAST_LOGIN);
+
+	/* Setup Enable NumLock */
+	GtkWidget *numlock = setup_notify_toggle ("enable_numlock", MDM_KEY_NUMLOCK);
+	if (!g_file_test ("/usr/bin/numlockx", G_FILE_TEST_IS_EXECUTABLE)) {
+		gtk_widget_set_sensitive (numlock, FALSE);
+		gtk_widget_set_tooltip_text (numlock, _("Please install 'numlockx' to enable this feature"));
+	}
+
+	/* Setup Local administrator login setttings */
+	setup_notify_toggle ("allowroot", MDM_KEY_ALLOW_ROOT);
+
+	/* Setup Enable debug message to system log */
+	setup_notify_toggle ("enable_debug", MDM_KEY_DEBUG);
+
+	/* Setup 24h clock */
+	setup_notify_toggle ("enable_24h_clock", MDM_KEY_USE_24_CLOCK);
+
+	/* Bold the Enable automatic login label */
+	checkbox = glade_xml_get_widget (xml, "autologin");
+	label = gtk_bin_get_child (GTK_BIN (checkbox));
+	g_object_set (G_OBJECT (label), "use_markup", TRUE, NULL);
+
+	/* Bold the Enable timed login label */
+	checkbox = glade_xml_get_widget (xml, "timedlogin");
+	label = gtk_bin_get_child (GTK_BIN (checkbox));
+	g_object_set (G_OBJECT (label), "use_markup", TRUE, NULL);
+
+	/* Setup Enable automatic login */
+ 	setup_user_combobox ("autologin_combo",
+			     MDM_KEY_AUTOMATIC_LOGIN);
+	setup_notify_toggle ("autologin", MDM_KEY_AUTOMATIC_LOGIN_ENABLE);
+
+	/* Setup Enable timed login */
+ 	setup_user_combobox ("timedlogin_combo",
+			     MDM_KEY_TIMED_LOGIN);
+	setup_intspin ("timedlogin_seconds", MDM_KEY_TIMED_LOGIN_DELAY);
+	setup_notify_toggle ("timedlogin", MDM_KEY_TIMED_LOGIN_ENABLE);	
 
 	return (dialog);
 }
@@ -3647,6 +3637,7 @@ mdm_event (GSignalInvocationHint *ihint,
 int 
 main (int argc, char *argv[])
 {
+
 	GtkWidget *dialog;
 
 	mdm_config_never_cache (TRUE);
@@ -3656,7 +3647,7 @@ main (int argc, char *argv[])
 	if (g_getenv ("RUNNING_UNDER_MDM") != NULL)
 		RUNNING_UNDER_MDM = TRUE;
 
-	bindtextdomain (GETTEXT_PACKAGE, GNOMELOCALEDIR);
+	bindtextdomain (GETTEXT_PACKAGE, "/usr/share/mdm/locale");
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 	textdomain (GETTEXT_PACKAGE);
 
@@ -3704,7 +3695,7 @@ main (int argc, char *argv[])
 					 GTK_DIALOG_MODAL /* flags */,
 					 GTK_MESSAGE_ERROR,
 					 GTK_BUTTONS_OK,
-					 _("Could not access configuration file (custom.conf)"),
+					 _("Could not access configuration file"),
 					 _("Make sure that the file exists before launching login manager config utility."));
 
 		gtk_dialog_run (GTK_DIALOG (dialog));
@@ -3752,7 +3743,7 @@ main (int argc, char *argv[])
 					      GTK_DIALOG_MODAL /* flags */,
 					      GTK_MESSAGE_ERROR,
 					      GTK_BUTTONS_OK,
-					      _("You must be the root user to configure MDM."),
+					      _("You must be root to configure MDM."),
 					      "");
 		if (RUNNING_UNDER_MDM)
 			setup_cursor (GDK_LEFT_PTR);

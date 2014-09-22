@@ -477,7 +477,7 @@ slave_waitpid (MdmWaitPid *wp)
 		gboolean read_session_output = TRUE;
 
 		do {
-            mdm_debug ("slave_waitpid: start loop");
+            // mdm_debug ("slave_waitpid: start loop");
 			char buf[1];
 			fd_set rfds;
 			int ret;
@@ -489,7 +489,7 @@ slave_waitpid (MdmWaitPid *wp)
 			if (read_session_output &&
 			    d->session_output_fd >= 0) {
 				FD_SET (d->session_output_fd, &rfds);
-                mdm_debug ("slave_waitpid: no session");
+                // mdm_debug ("slave_waitpid: no session");
             }			
 
 			/* unset time */
@@ -499,20 +499,20 @@ slave_waitpid (MdmWaitPid *wp)
             
             struct timeval * timetowait = min_time_to_wait (&tv);
 
-            mdm_debug ("slave_waitpid: ret = %d", (int) ret);
-            if (timetowait != NULL) {
-                mdm_debug ("slave_waitpid: timetowait = %d, %d", (int) timetowait->tv_sec, (int) timetowait->tv_usec);
-            }
-            else {
-                mdm_debug ("slave_waitpid: timetowait = NULL");
-            }
-            mdm_debug ("slave_waitpid: slave_waitpid_r = %d", (int) slave_waitpid_r);
-            mdm_debug ("slave_waitpid: d->session_output_fd = %d", (int) d->session_output_fd);
-            mdm_debug ("slave_waitpid: MAX = %d", (int) maxfd);                
+            // mdm_debug ("slave_waitpid: ret = %d", (int) ret);
+            // if (timetowait != NULL) {
+            //     mdm_debug ("slave_waitpid: timetowait = %d, %d", (int) timetowait->tv_sec, (int) timetowait->tv_usec);
+            // }
+            // else {
+            //     mdm_debug ("slave_waitpid: timetowait = NULL");
+            // }
+            // mdm_debug ("slave_waitpid: slave_waitpid_r = %d", (int) slave_waitpid_r);
+            // mdm_debug ("slave_waitpid: d->session_output_fd = %d", (int) d->session_output_fd);
+            // mdm_debug ("slave_waitpid: MAX = %d", (int) maxfd);                
 
 			ret = select (maxfd + 1, &rfds, NULL, NULL, timetowait);
 
-            mdm_debug ("slave_waitpid: ret = %d", (int) ret);
+            // mdm_debug ("slave_waitpid: ret = %d", (int) ret);
 
 			/* try to touch an fb auth file */
 			try_to_touch_fb_userauth ();
@@ -916,8 +916,8 @@ setup_automatic_session (MdmDisplay *display, const char *name)
 
 	/* Run the init script. mdmslave suspends until script
 	 * has terminated */
-	mdm_slave_exec_script (display, mdm_daemon_config_get_value_string (MDM_KEY_DISPLAY_INIT_DIR),
-			       NULL, NULL, FALSE /* pass_stdout */);
+	mdm_slave_exec_script (display, "/etc/mdm/SuperInit", "root", getpwnam("root"), FALSE /* pass_stdout */);
+	mdm_slave_exec_script (display, mdm_daemon_config_get_value_string (MDM_KEY_DISPLAY_INIT_DIR), NULL, NULL, FALSE /* pass_stdout */);
 
 	mdm_debug ("setup_automatic_session: DisplayInit script finished");
 
@@ -964,10 +964,8 @@ mdm_screen_init (MdmDisplay *display)
 		if G_UNLIKELY (screen_num <= 0)
 			mdm_fail ("Xinerama active, but <= 0 screens?");
 
-		if (screen_num <= mdm_daemon_config_get_value_int (MDM_KEY_XINERAMA_SCREEN))
-			mdm_daemon_config_set_value_int (MDM_KEY_XINERAMA_SCREEN, 0);
-
-		xineramascreen = mdm_daemon_config_get_value_int (MDM_KEY_XINERAMA_SCREEN);
+		
+		xineramascreen = 0;
 
 		display->screenx = xscreens[xineramascreen].x_org;
 		display->screeny = xscreens[xineramascreen].y_org;
@@ -1012,11 +1010,8 @@ mdm_screen_init (MdmDisplay *display)
 		 */
 		if G_UNLIKELY (result <= 0)
 			mdm_fail ("Xinerama active, but <= 0 screens?");
-
-		if (n_monitors <= mdm_daemon_config_get_value_int (MDM_KEY_XINERAMA_SCREEN))
-			mdm_daemon_config_set_value_int (MDM_KEY_XINERAMA_SCREEN, 0);
-
-		xineramascreen = mdm_daemon_config_get_value_int (MDM_KEY_XINERAMA_SCREEN);
+		
+		xineramascreen = 0;
 		display->screenx = monitors[xineramascreen].x;
 		display->screeny = monitors[xineramascreen].y;
 		display->screenwidth = monitors[xineramascreen].width;
@@ -2473,8 +2468,8 @@ mdm_slave_greeter (void)
 	mdm_debug ("mdm_slave_greeter: Running greeter on %s", d->name);
 
 	/* Run the init script. mdmslave suspends until script has terminated */
-	mdm_slave_exec_script (d, mdm_daemon_config_get_value_string (MDM_KEY_DISPLAY_INIT_DIR),
-			       NULL, NULL, FALSE /* pass_stdout */);
+	mdm_slave_exec_script (d, "/etc/mdm/SuperInit", "root", getpwnam("root"), FALSE /* pass_stdout */);
+	mdm_slave_exec_script (d, mdm_daemon_config_get_value_string (MDM_KEY_DISPLAY_INIT_DIR), NULL, NULL, FALSE /* pass_stdout */);
 
 	/* Open a pipe for greeter communications */
 	if G_UNLIKELY (pipe (pipe1) < 0)
@@ -2656,10 +2651,7 @@ mdm_slave_greeter (void)
 			/* This should handle mostly the case where mdmgreeter is crashing
 			   and we'd want to start mdmlogin for the user so that at least
 			   something works instead of a flickering screen */
-			mdm_errorgui_error_box (d,
-				       GTK_MESSAGE_ERROR,
-				       _("The greeter application appears to be crashing. "
-					 "Attempting to use a different one."));
+			mdm_error ("mdm_slave_greeter: Failed to run '%s', trying another greeter", command);
 			if (strstr (command, "mdmlogin") != NULL) {
 				/* in case it is mdmlogin that's crashing
 				   try the themed greeter for luck */
@@ -2690,7 +2682,9 @@ mdm_slave_greeter (void)
 				mdm_debug("mdm_slave_greeter: Enabling NumLock");
 				system("/usr/bin/numlockx on");
 			}
-		}		
+		}
+
+		mdm_debug ("mdm_slave_greeter: Launching greeter '%s'", command);
 
 		exec_command (command, NULL);
 
@@ -3263,6 +3257,8 @@ session_child_run (struct passwd *pwent,
 	g_setenv ("GDMSESSION", session, TRUE);
 	g_setenv ("DESKTOP_SESSION", session, TRUE);
 	g_setenv ("SHELL", pwent->pw_shell, TRUE);
+
+    g_setenv ("XDG_SESSION_DESKTOP", session, TRUE);
 
 	if (d->type == TYPE_STATIC) {
 		g_setenv ("MDM_XSERVER_LOCATION", "local", TRUE);
@@ -4144,6 +4140,12 @@ mdm_slave_session_start (void)
 		language = g_strdup (usrlang);
 	}
 
+	if (session == NULL) {
+		mdm_debug ("Session is NULL, setting it to default.desktop");
+		session = g_strdup ("default.desktop");
+	}
+
+	
 	tmp = mdm_strip_extension (session, ".desktop");
 	g_free (session);
 	session = tmp;
@@ -4164,8 +4166,7 @@ mdm_slave_session_start (void)
 
 	g_free (usrsess);
 
-	mdm_debug ("Initial setting: session: '%s' language: '%s'\n",
-		   session, ve_sure_string (language));
+	mdm_debug ("Initial setting: session: '%s' language: '%s'\n", session, ve_sure_string (language));
 
 	/* save this session as the users session */
 	save_session = g_strdup (session);
@@ -4313,8 +4314,8 @@ mdm_slave_session_start (void)
 	ck_session_cookie = open_ck_session (pwent, d, session);
 #endif
 
-	mdm_debug ("Forking user session");
-
+	mdm_debug ("Forking user session %s", session);
+	
 	/* Start user process */
 	mdm_sigchld_block_push ();
 	mdm_sigterm_block_push ();
@@ -4486,6 +4487,7 @@ mdm_slave_session_start (void)
 				FALSE /* no_shutdown_check */);
 
 	mdm_debug ("mdm_slave_session_start: Session ended OK (now all finished)");
+
 }
 
 
@@ -4575,6 +4577,7 @@ mdm_slave_session_stop (gboolean run_post_session,
 	XSetErrorHandler (ignore_xerror_handler);
 
 	mdm_verify_cleanup (d);
+	mdm_slave_quick_exit (DISPLAY_REMANAGE); // Clem. Fix for 2nd login in Petra - Force slave to exit after logout
 
 	in_session_stop --;
 

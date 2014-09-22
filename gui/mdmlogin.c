@@ -104,7 +104,6 @@ static GtkWidget *msg;
 static GtkWidget *auto_timed_msg;
 static GtkWidget *err_box;
 static guint err_box_clear_handler = 0;
-static gboolean require_quarter = FALSE;
 static GtkWidget *icon_win = NULL;
 static GtkWidget *sessmenu;
 static GtkWidget *langmenu;
@@ -685,98 +684,6 @@ mdm_login_suspend_handler (void)
 }
 
 static void
-mdm_theme_handler (GtkWidget *widget, gpointer data)
-{
-    const char *theme_name = (const char *)data;
-
-    printf ("%c%c%c%s\n", STX, BEL, MDM_INTERRUPT_THEME, theme_name);
-  
-    fflush (stdout);
-
-    mdm_set_theme (theme_name);
-
-    login_window_resize (FALSE);
-    mdm_wm_center_window (GTK_WINDOW (login));
-}
-
-static int dance_handler = 0;
-
-static gboolean
-dance (gpointer data)
-{
-	static double t1 = 0.0, t2 = 0.0;
-	double xm, ym;
-	int x, y;
-	static int width = -1;
-	static int height = -1;
-
-	if (width == -1)
-		width = mdm_wm_screen.width;
-	if (height == -1)
-		height = mdm_wm_screen.height;
-
-	if (login == NULL ||
-	    login->window == NULL) {
-		dance_handler = 0;
-		return FALSE;
-	}
-
-	xm = cos (2.31 * t1);
-	ym = sin (1.03 * t2);
-
-	t1 += 0.03 + (rand () % 10) / 500.0;
-	t2 += 0.03 + (rand () % 10) / 500.0;
-
-	x = mdm_wm_screen.x + (width / 2) + (width / 5) * xm;
-	y = mdm_wm_screen.y + (height / 2) + (height / 5) * ym;
-
-	set_screen_pos (login,
-			x - login->allocation.width / 2,
-			y - login->allocation.height / 2);
-
-	return TRUE;
-}
-
-static gboolean
-evil (const char *user)
-{	
-	if (dance_handler == 0 &&
-	    /* do not translate */
-	    strcmp (user, "Start Dancing") == 0) {
-		mdm_common_setup_cursor (GDK_UMBRELLA);
-		dance_handler = g_timeout_add (50, dance, NULL);		
-		gtk_entry_set_text (GTK_ENTRY (entry), "");
-		return TRUE;
-	} else if (dance_handler != 0 &&
-		   /* do not translate */
-		   strcmp (user, "Stop Dancing") == 0) {
-		mdm_common_setup_cursor (GDK_LEFT_PTR);
-		g_source_remove (dance_handler);
-		dance_handler = 0;		
-		mdm_wm_center_window (GTK_WINDOW (login));
-		gtk_entry_set_text (GTK_ENTRY (entry), "");
-		return TRUE;
-				 /* do not translate */
-	} else if (strcmp (user, "Gimme Random Cursor") == 0) {
-		mdm_common_setup_cursor (((rand () >> 3) % (GDK_LAST_CURSOR/2)) * 2);
-		gtk_entry_set_text (GTK_ENTRY (entry), "");
-		return TRUE;
-				 /* do not translate */
-	} else if (strcmp (user, "Require Quater") == 0 ||
-		   strcmp (user, "Require Quarter") == 0) {
-		/* btw, note that I misspelled quarter before and
-		 * thus this checks for Quater as well as Quarter to
-		 * keep compatibility which is obviously important for
-		 * something like this */
-		require_quarter = TRUE;
-		gtk_entry_set_text (GTK_ENTRY (entry), "");
-		return TRUE;
-	}
-
-	return FALSE;
-}
-
-static void
 mdm_login_enter (GtkWidget *entry)
 {
 	const char *login_string;
@@ -805,20 +712,7 @@ mdm_login_enter (GtkWidget *entry)
 		printf ("%c%c%c\n", STX, BEL, MDM_INTERRUPT_TIMED_LOGIN);
 		fflush (stdout);
 		return;
-	}
-
-	if (str != NULL &&
-	    (strcmp (str, _("Username:")) == 0 ||
-	     strcmp (str, _("_Username:")) == 0) &&
-	    /* evilness */
-	    evil (login_string)) {
-		/* obviously being 100% reliable is not an issue for
-		   this test */
-		gtk_widget_set_sensitive (entry, TRUE);
-		gtk_widget_grab_focus (entry);	
-		gtk_window_set_focus (GTK_WINDOW (login), entry);	
-		return;
-	}
+	}	
 
 	/* clear the err_box */
 	if (err_box_clear_handler > 0)
@@ -998,101 +892,6 @@ mdm_login_language_menu_new (void)
 		      NULL);
     gtk_widget_show (GTK_WIDGET (item));
 
-    return menu;
-}
-
-static gboolean
-theme_allowed (const char *theme)
-{
-	gchar * themestoallow = mdm_config_get_string (MDM_KEY_GTK_THEMES_TO_ALLOW);
-	char **vec;
-	int i;
-
-	if (ve_string_empty (themestoallow) ||
-	    g_ascii_strcasecmp (themestoallow, "all") == 0)
-		return TRUE;
-
-	vec = g_strsplit (themestoallow, ",", 0);
-	if (vec == NULL || vec[0] == NULL)
-		return TRUE;
-
-	for (i = 0; vec[i] != NULL; i++) {
-		if (strcmp (vec[i], theme) == 0) {
-			g_strfreev (vec);
-			return TRUE;
-		}
-	}
-
-	g_strfreev (vec);
-	return FALSE;
-}
-
-static GSList *
-build_theme_list (void)
-{
-    DIR *dir;
-    struct dirent *de;
-    gchar *theme_dir;
-    GSList *theme_list = NULL;
-
-    theme_dir = gtk_rc_get_theme_dir ();
-    dir = opendir (theme_dir);
-
-    while ((de = readdir (dir))) {
-	char *name;
-	if (de->d_name[0] == '.')
-		continue;
-	if ( ! theme_allowed (de->d_name))
-		continue;
-	name = g_build_filename (theme_dir, de->d_name, GTK_KEY, NULL);
-	if (g_file_test (name, G_FILE_TEST_IS_DIR))
-		theme_list = g_slist_append (theme_list, g_strdup (de->d_name));
-	g_free (name);
-    }
-    g_free (theme_dir);
-    closedir (dir);
-
-    return theme_list;
-}
-
-static GtkWidget *
-mdm_login_theme_menu_new (void)
-{
-    GSList *theme_list;
-    GtkWidget *item;
-    GtkWidget *menu;
-    int num = 1;
-
-    if ( ! mdm_config_get_bool (MDM_KEY_ALLOW_GTK_THEME_CHANGE))
-	    return NULL;
-
-    menu = gtk_menu_new ();
-    
-    for (theme_list = build_theme_list ();
-	 theme_list != NULL;
-	 theme_list = theme_list->next) {
-        char *menu_item_name;
-        char *theme_name = theme_list->data;
-	theme_list->data = NULL;
-
-	if (num < 10)
-		menu_item_name = g_strdup_printf ("_%d. %s", num, _(theme_name));
-	else if ((num -10) + (int)'a' <= (int)'z')
-		menu_item_name = g_strdup_printf ("_%c. %s",
-						  (char)(num-10)+'a',
-						  _(theme_name));
-	else
-		menu_item_name = g_strdup (theme_name);
-	num++;
-
-	item = gtk_menu_item_new_with_mnemonic (menu_item_name);
-	gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
-	gtk_widget_show (GTK_WIDGET (item));
-	g_signal_connect (G_OBJECT (item), "activate",
-			  G_CALLBACK (mdm_theme_handler), theme_name);
-	g_free (menu_item_name);
-    }
-    g_slist_free (theme_list);
     return menu;
 }
 
@@ -1501,6 +1300,11 @@ process_operation (guchar       op_code,
 	mdm_lang_op_slang (args);
 	break;
 
+    case MDM_SETSESS:    	
+    	printf ("%c\n", STX);
+    	fflush (stdout);
+    	break;
+
     case MDM_SETLANG:
 	mdm_lang_op_setlang (args);
 	break;
@@ -1558,28 +1362,7 @@ process_operation (guchar       op_code,
 	if (timed_handler_id != 0) {
 		g_source_remove (timed_handler_id);
 		timed_handler_id = 0;
-	}
-
-	if (require_quarter) {
-		/* we should be now fine for focusing new windows */
-		mdm_wm_focus_new_windows (TRUE);
-
-		dlg = hig_dialog_new (NULL /* parent */,
-				      GTK_DIALOG_MODAL /* flags */,
-				      GTK_MESSAGE_INFO,
-				      GTK_BUTTONS_OK,
-				      /* translators:  This is a nice and evil eggie text, translate
-				       * to your favourite currency */
-				      _("Please insert 25 cents "
-					"to log in."),
-				      "");
-		mdm_wm_center_window (GTK_WINDOW (dlg));
-
-		mdm_wm_no_login_focus_push ();
-		gtk_dialog_run (GTK_DIALOG (dlg));
-		gtk_widget_destroy (dlg);
-		mdm_wm_no_login_focus_pop ();
-	}
+	}	
 
 	/* Hide the login window now */
 	gtk_widget_hide (login);
@@ -1971,7 +1754,6 @@ mdm_login_gui_init (void)
     GtkWidget *bbox = NULL;
     GtkWidget /**help_button,*/ *button_box;
     gint i;        
-    GtkWidget *thememenu;
     const gchar *theme_name;
     gchar *key_string = NULL;
 
@@ -2108,15 +1890,7 @@ mdm_login_gui_init (void)
 		gtk_menu_item_set_submenu (GTK_MENU_ITEM (item), menu);
 		gtk_widget_show (GTK_WIDGET (item));
 	}
-    }
-
-    menu = mdm_login_theme_menu_new ();
-    if (menu != NULL) {
-	thememenu = gtk_menu_item_new_with_mnemonic (_("_Theme"));
-	gtk_menu_shell_append (GTK_MENU_SHELL (menubar), thememenu);
-	gtk_menu_item_set_submenu (GTK_MENU_ITEM (thememenu), menu);
-	gtk_widget_show (GTK_WIDGET (thememenu));
-    }   
+    }  
 
     /* The clock */
     clock_label = gtk_label_new ("");
@@ -2410,16 +2184,16 @@ render_scaled_back (const GdkPixbuf *pb)
 	width = gdk_pixbuf_get_width (pb);
 	height = gdk_pixbuf_get_height (pb);
 
-	for (i = 0; i < mdm_wm_screens; i++) {
+	for (i = 0; i < mdm_wm_num_monitors; i++) {
 		gdk_pixbuf_scale (pb, back,
-				  mdm_wm_allscreens[i].x,
-				  mdm_wm_allscreens[i].y,
-				  mdm_wm_allscreens[i].width,
-				  mdm_wm_allscreens[i].height,
-				  mdm_wm_allscreens[i].x /* offset_x */,
-				  mdm_wm_allscreens[i].y /* offset_y */,
-				  (double) mdm_wm_allscreens[i].width / width,
-				  (double) mdm_wm_allscreens[i].height / height,
+				  mdm_wm_all_monitors[i].x,
+				  mdm_wm_all_monitors[i].y,
+				  mdm_wm_all_monitors[i].width,
+				  mdm_wm_all_monitors[i].height,
+				  mdm_wm_all_monitors[i].x /* offset_x */,
+				  mdm_wm_all_monitors[i].y /* offset_y */,
+				  (double) mdm_wm_all_monitors[i].width / width,
+				  (double) mdm_wm_all_monitors[i].height / height,
 				  GDK_INTERP_BILINEAR);
 	}
 
@@ -2570,7 +2344,7 @@ mdm_read_config (void)
 	mdm_config_get_int    (MDM_KEY_MAX_ICON_WIDTH);
 	mdm_config_get_int    (MDM_KEY_MINIMAL_UID);
 	mdm_config_get_int    (MDM_KEY_TIMED_LOGIN_DELAY);
-	mdm_config_get_int    (MDM_KEY_XINERAMA_SCREEN);
+	mdm_config_get_string    (MDM_KEY_PRIMARY_MONITOR);
 
 	mdm_config_get_bool   (MDM_KEY_ALLOW_GTK_THEME_CHANGE);
 	mdm_config_get_bool   (MDM_KEY_ALLOW_ROOT);	
@@ -2635,7 +2409,7 @@ mdm_reread_config (int sig, gpointer data)
 	    mdm_config_reload_int    (MDM_KEY_MAX_ICON_HEIGHT) ||
 	    mdm_config_reload_int    (MDM_KEY_MINIMAL_UID) ||
 	    mdm_config_reload_int    (MDM_KEY_TIMED_LOGIN_DELAY) ||
-	    mdm_config_reload_int    (MDM_KEY_XINERAMA_SCREEN) ||
+	    mdm_config_reload_string    (MDM_KEY_PRIMARY_MONITOR) ||
 
 	    mdm_config_reload_bool   (MDM_KEY_ALLOW_GTK_THEME_CHANGE) ||
 	    mdm_config_reload_bool   (MDM_KEY_ALLOW_ROOT) ||
@@ -2742,7 +2516,7 @@ main (int argc, char *argv[])
     
     setlocale (LC_ALL, "");
 
-    mdm_wm_screen_init (mdm_config_get_int (MDM_KEY_XINERAMA_SCREEN));   
+    mdm_wm_screen_init (mdm_config_get_string (MDM_KEY_PRIMARY_MONITOR));   
 
     /* Load the background as early as possible so MDM does not leave  */
     /* the background unfilled.   The cursor should be a watch already */
@@ -2756,12 +2530,10 @@ main (int argc, char *argv[])
                    mdm_config_get_int (MDM_KEY_MAX_ICON_HEIGHT));
 
     if (! defface) {
-        mdm_common_warning ("Could not open DefaultImage: %s.  Suspending face browser!",
-            mdm_config_get_string (MDM_KEY_DEFAULT_FACE));
-    } else  {
-        mdm_users_init (&users, &users_string, NULL, defface,
-                &size_of_users, login_is_local, !DOING_MDM_DEVELOPMENT);
+        mdm_common_warning ("Could not open DefaultFace: %s!", mdm_config_get_string (MDM_KEY_DEFAULT_FACE));
     }
+
+    mdm_users_init (&users, &users_string, NULL, defface, &size_of_users, login_is_local, !DOING_MDM_DEVELOPMENT);    
 
     mdm_login_gui_init ();
 
@@ -2964,7 +2736,7 @@ main (int argc, char *argv[])
 
     /* Only setup the cursor now since it will be a WATCH from before */
     mdm_common_setup_cursor (GDK_LEFT_PTR);
-
+	mdm_wm_center_cursor ();
     mdm_common_pre_fetch_launch ();
     gtk_main ();
 

@@ -353,6 +353,11 @@ process_operation (guchar       op_code,
 	mdm_lang_op_slang (args);
 	break;
 
+	case MDM_SETSESS:
+		printf ("%c\n", STX);
+        fflush (stdout);	
+		break;
+
     case MDM_SETLANG:
 	mdm_lang_op_setlang (args);
 	break;
@@ -674,7 +679,6 @@ mdm_read_config (void)
 	mdm_config_get_string (MDM_KEY_INFO_MSG_FILE);
 	mdm_config_get_string (MDM_KEY_INFO_MSG_FONT);
 	mdm_config_get_string (MDM_KEY_TIMED_LOGIN);
-	mdm_config_get_string (MDM_KEY_GRAPHICAL_THEMED_COLOR);
 	mdm_config_get_string (MDM_KEY_BACKGROUND_COLOR);
 	mdm_config_get_string (MDM_KEY_DEFAULT_FACE);
 	mdm_config_get_string (MDM_KEY_DEFAULT_SESSION);
@@ -685,7 +689,7 @@ mdm_read_config (void)
         mdm_config_get_string (MDM_KEY_RBAC_SYSTEM_COMMAND_KEYS);
         mdm_config_get_string (MDM_KEY_SYSTEM_COMMANDS_IN_MENU);
 
-	mdm_config_get_int    (MDM_KEY_XINERAMA_SCREEN);
+	mdm_config_get_string    (MDM_KEY_PRIMARY_MONITOR);
 	mdm_config_get_int    (MDM_KEY_TIMED_LOGIN_DELAY);
 	mdm_config_get_int    (MDM_KEY_FLEXI_REAP_DELAY_MINUTES);
 	mdm_config_get_int    (MDM_KEY_MAX_ICON_HEIGHT);
@@ -738,14 +742,13 @@ greeter_reread_config (int sig, gpointer data)
 	    mdm_config_reload_string (MDM_KEY_INFO_MSG_FILE) ||
 	    mdm_config_reload_string (MDM_KEY_INFO_MSG_FONT) ||
 	    mdm_config_reload_string (MDM_KEY_TIMED_LOGIN) ||
-	    mdm_config_reload_string (MDM_KEY_GRAPHICAL_THEMED_COLOR) ||
 	    mdm_config_reload_string (MDM_KEY_BACKGROUND_COLOR) ||
 	    mdm_config_reload_string (MDM_KEY_DEFAULT_FACE) ||
 	    mdm_config_reload_string (MDM_KEY_DEFAULT_SESSION) ||
             mdm_config_reload_string (MDM_KEY_RBAC_SYSTEM_COMMAND_KEYS) ||
             mdm_config_reload_string (MDM_KEY_SYSTEM_COMMANDS_IN_MENU) ||
 
-	    mdm_config_reload_int    (MDM_KEY_XINERAMA_SCREEN) ||
+	    mdm_config_reload_string    (MDM_KEY_PRIMARY_MONITOR) ||
 	    mdm_config_reload_int    (MDM_KEY_TIMED_LOGIN_DELAY) ||
 	    mdm_config_reload_int    (MDM_KEY_FLEXI_REAP_DELAY_MINUTES) ||
 	    mdm_config_reload_int    (MDM_KEY_MAX_ICON_HEIGHT) ||
@@ -1004,16 +1007,12 @@ main (int argc, char *argv[])
 	  mdm_set_theme (mdm_gtk_theme);
   }
 
-  mdm_wm_screen_init (mdm_config_get_int (MDM_KEY_XINERAMA_SCREEN)); 
+  mdm_wm_screen_init (mdm_config_get_string (MDM_KEY_PRIMARY_MONITOR)); 
 
   /* Load the background as early as possible so MDM does not leave  */
   /* the background unfilled.   The cursor should be a watch already */
   /* but just in case */
-  bg_color = mdm_config_get_string (MDM_KEY_GRAPHICAL_THEMED_COLOR);
-  /* If a graphical theme color does not exist fallback to the plain color */
-  if (ve_string_empty (bg_color)) {
-    bg_color = mdm_config_get_string (MDM_KEY_BACKGROUND_COLOR);
-  }
+  bg_color = mdm_config_get_string (MDM_KEY_BACKGROUND_COLOR);  
   mdm_common_setup_background_color (bg_color);
   greeter_session_init ();
   mdm_lang_initialize_model (mdm_config_get_string (MDM_KEY_LOCALE_FILE));
