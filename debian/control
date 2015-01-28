@@ -34,8 +34,8 @@ Build-Depends: libpam0g-dev,
                xserver-xorg,
                libwebkitgtk-dev,
                gnome-common,
-               tree,
-               libxml2-utils
+               libxml2-utils,
+               dh-systemd (>= 1.5)
 Standards-Version: 3.9.0
 
 Package: huayra-mdm
@@ -52,9 +52,9 @@ Depends: ${shlibs:Depends},
          gir1.2-webkit-3.0,
          gir1.2-gtk-3.0,
          python,
+	 huayra-mdm-themes
 Recommends: whiptail | dialog,
             zenity,
-            huayra-mdm-themes,
             xserver-xorg
 Suggests: locales,
           pm-utils,
