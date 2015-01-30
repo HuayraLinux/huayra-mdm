@@ -30,7 +30,4 @@ debian/tmp/usr/share/locale
 debian/tmp/usr/share/man
 debian/tmp/usr/share/omf/mdm
 debian/tmp/usr/share/pixmaps
-debian/init/mdm etc/init.d/
-debian/mdm.conf etc/init/
 debian/pam.d/* etc/pam.d/
-debian/tmp/usr/sbin/mdm
