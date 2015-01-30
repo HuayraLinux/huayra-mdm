@@ -1,3 +1,10 @@
+huayra-mdm (1.8.3-2) unstable; urgency=medium
+
+  * Deshabilitando systemd hasta que quede funcional
+    (se sigue usando el servicio de init) 
+
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Fri, 30 Jan 2015 16:42:37 -0300
+
 huayra-mdm (1.8.3-1) unstable; urgency=medium
 
   * Comentando gnome-keyring de pam porque se bloquea. 
