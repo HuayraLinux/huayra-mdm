@@ -121,3 +121,15 @@ Description-zh_CN.UTF-8: 默认显示管理器：
  .
  如果多个显示管理器被配置为分别管理不同的 X 服务器，那么它们可以同时运行。要做到这一点，您要按照需求分别对各显示管理器进行设置，编辑它们在 /etc/init.d 目录下的 init 脚本，并且关闭对默认显示管理器的检查。
 
+
+Template: mdm/autologin
+Type: boolean
+Default: true
+Description: Autologin en MDM
+ Indique si desea entrar automaticamente.
+
+Template: mdm/username
+Type: string
+Default: alumno
+Description: Nombre de usuario
+ Ingrese el nombre de usuario para autologin

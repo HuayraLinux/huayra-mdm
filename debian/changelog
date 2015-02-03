@@ -1,3 +1,19 @@
+huayra-mdm (1.8.3-4) unstable; urgency=medium
+
+  * Vuelvo a agregar que instale los initscripts.
+  * Temporalmente quitamos los dh de systemd.
+  * Agrego dh_link.
+  *
+
+ -- Mauro <mauro@sdf.org>  Tue, 03 Feb 2015 12:49:59 -0300
+
+huayra-mdm (1.8.3-3) unstable; urgency=medium
+
+  * Agrego las opciones de autologin que estaban en
+    huayra-apps-settings.
+
+ -- Mauro <mauro@sdf.org>  Mon, 02 Feb 2015 15:32:16 -0300
+
 huayra-mdm (1.8.3-2) unstable; urgency=medium
 
   * Deshabilitando systemd hasta que quede funcional

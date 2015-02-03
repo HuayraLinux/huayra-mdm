@@ -31,3 +31,6 @@ debian/tmp/usr/share/man
 debian/tmp/usr/share/omf/mdm
 debian/tmp/usr/share/pixmaps
 debian/pam.d/* etc/pam.d/
+debian/mdm-conf.py usr/share/mdm/scripts/
+debian/init/mdm etc/init.d/
+debian/mdm.conf etc/init/

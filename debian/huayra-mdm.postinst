@@ -6,6 +6,10 @@ set -e
 
 THIS_PACKAGE=mdm
 DEFAULT_DISPLAY_MANAGER_FILE=/etc/X11/default-display-manager
+MDM_CONF="/usr/bin/mdm-conf"
+MDM_CONF_FILE="/etc/mdm/mdm.conf"
+
+db_version 2.0
 
 # creating mdm group if it isn't already there
 if ! getent group mdm >/dev/null; then
@@ -44,9 +48,21 @@ if [ ! -e $DEFAULT_DISPLAY_MANAGER_FILE ]; then
       echo "Please be sure to run \"dpkg --configure $RET\"."
     fi
     if db_get "$RET"/daemon_name; then
-      echo "$RET" > $DEFAULT_DISPLAY_MANAGER_FILE
+	echo "$RET" > $DEFAULT_DISPLAY_MANAGER_FILE;
     fi
   fi
+fi
+
+
+db_get mdm/autologin
+autologin="$RET"
+
+if [ "$autologin" = "true" ]; then
+    db_get mdm/username
+    username="$RET"
+    $MDM_CONF -ds -u $username
+else
+    $MDM_CONF -s daemon=AutomaticLoginEnable=false
 fi
 
 # remove the displaced old default display manager file if it exists
