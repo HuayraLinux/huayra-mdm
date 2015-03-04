@@ -81,7 +81,7 @@ def default_settings():
     return: nil
     """
     set_daemon_section()
-    set_settings('greeter', [('HTMLTheme','huayra_limbo')])
+    set_settings('greeter', [('HTMLTheme','huayra_liso')])
 
 
 if __name__ == "__main__":

@@ -1,3 +1,9 @@
+huayra-mdm (1.8.3-5) torbellino; urgency=medium
+
+  * Seteando theme por defecto a huayra_liso
+
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Wed, 04 Mar 2015 18:20:11 -0300
+
 huayra-mdm (1.8.3-4) unstable; urgency=medium
 
   * Vuelvo a agregar que instale los initscripts.
