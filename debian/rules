@@ -73,10 +73,10 @@ binary-arch: build install
 	dh_installdirs -a
 	dh_install -a
 	# special environment settings should be done in /etc/default/mdm
-	mv debian/tmp/usr/sbin/mdm-binary debian/tmp/usr/sbin/mdm
-	cp debian/tmp/usr/sbin/mdm debian/huayra-mdm/usr/sbin/mdm
-	cd debian/huayra-mdm/usr/sbin && rm -f mdm-restart mdm-safe-restart mdm-stop
-	chmod 755 debian/huayra-mdm/etc/mdm/Xsession
+	mv debian/huayra-mdm/usr/sbin/mdm-binary debian/huayra-mdm/usr/sbin/mdm
+	cp debian/huayra-mdm/usr/sbin/mdm debian/tmp/usr/sbin/mdm
+	cd debian/tmp/usr/sbin && rm -f mdm-restart mdm-safe-restart mdm-stop
+	chmod 755 debian/tmp/etc/mdm/Xsession
 	dh_installdebconf -a
 	dh_installdocs -a
 	dh_link -a
@@ -87,9 +87,9 @@ binary-arch: build install
 	dh_installpam -a
 	# additional PAM file to install
 	dh_installpam -pmdm --name=mdm-autologin
-	#dh_systemd_enable
+	dh_systemd_enable
 	dh_installinit -a --noscripts
-	#dh_systemd_start
+	dh_systemd_start
 	dh_installman -a
 	dh_installchangelogs -a ChangeLog
 	dh_strip -a
