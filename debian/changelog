@@ -1,6 +1,6 @@
-huayra-mdm (2.0.4-1) UNRELEASED; urgency=medium
+huayra-mdm (2.0.4-1) unstable; urgency=medium
 
-  * nueva version 2.x
+  * nueva rama 2.x
 
  -- Fernando Toledo <ragnarok@docksud.com.ar>  Mon, 19 Oct 2015 15:02:14 -0300
 
