@@ -1,3 +1,10 @@
+huayra-mdm (2.0.7-1) unstable; urgency=medium
+
+  * Nuevo release 2.0.7 de mdm
+  * Eliminando script para sysvinit para dejar solo systemd
+  
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Thu, 31 Mar 2016 13:09:54 -0300
+
 huayra-mdm (2.0.4-3) unstable; urgency=medium
 
   * regresion: deshabilitando gnome-keyring de acuerdo al bug:
