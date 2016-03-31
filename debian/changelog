@@ -5,6 +5,12 @@ huayra-mdm (2.0.7-1) unstable; urgency=medium
   
  -- Fernando Toledo <ragnarok@docksud.com.ar>  Thu, 31 Mar 2016 13:09:54 -0300
 
+huayra-mdm (2.0.4-4) unstable; urgency=medium
+
+  * fix de permisos de /etc/mdm/Xsession
+
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Fri, 20 Nov 2015 14:15:34 -0300
+
 huayra-mdm (2.0.4-3) unstable; urgency=medium
 
   * regresion: deshabilitando gnome-keyring de acuerdo al bug:

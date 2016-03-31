@@ -87,6 +87,10 @@ if [ ! -e /usr/bin/gdmflexiserver ]; then
   ln -s /usr/bin/mdmflexiserver /usr/bin/gdmflexiserver
 fi
 
+if [ -f /etc/mdm/Xsession ]; then
+    echo "Set Xsession permissions"
+    chmod 755 /etc/mdm/Xsession
+fi
 #DEBHELPER#
 
 exit 0
