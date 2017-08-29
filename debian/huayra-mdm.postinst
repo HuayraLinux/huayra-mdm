@@ -48,7 +48,7 @@ if [ ! -e $DEFAULT_DISPLAY_MANAGER_FILE ]; then
       echo "Please be sure to run \"dpkg --configure $RET\"."
     fi
     if db_get "$RET"/daemon_name; then
-	echo "$RET" > $DEFAULT_DISPLAY_MANAGER_FILE;
+      echo "$RET" > $DEFAULT_DISPLAY_MANAGER_FILE
     fi
   fi
 fi
@@ -58,7 +58,7 @@ db_get mdm/autologin
 autologin="$RET"
 
 if [ "$autologin" = "true" ]; then
-    db_get mdm/username
+    db_get $THIS_PACKAGE/username
     username="$RET"
     $MDM_CONF -ds -u $username
 else

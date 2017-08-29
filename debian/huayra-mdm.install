@@ -5,16 +5,16 @@ debian/insserv.conf.d			etc
 debian/tmp/etc/dm
 debian/tmp/etc/mdm/Init
 debian/tmp/etc/mdm/SuperInit
-#debian/tmp/etc/mdm/SuperPost
+debian/tmp/etc/mdm/SuperPost
 debian/tmp/etc/mdm/PreSession
 debian/tmp/etc/mdm/PostSession
 debian/tmp/etc/mdm/mdm.conf
 debian/tmp/etc/mdm/XKeepsCrashing
 debian/tmp/etc/mdm/PostLogin
 debian/tmp/etc/mdm/modules
+debian/tmp/etc/X11/Xsession.d
 debian/tmp/usr/bin
 debian/tmp/usr/lib/mdm
-debian/tmp/usr/sbin/mdm
 debian/tmp/usr/lib/gtk-2.0/modules/*.so
 debian/tmp/usr/sbin/mdmsetup
 debian/tmp/usr/sbin/mdm-binary
@@ -26,11 +26,9 @@ debian/tmp/usr/share/mdm/*.glade
 debian/tmp/usr/share/mdm/locale
 debian/tmp/usr/share/mdm/recovery
 debian/tmp/usr/share/mdm/gtk-preview.png
-debian/tmp/usr/share/gnome/help/mdm
 debian/tmp/usr/share/icons/hicolor
 debian/tmp/usr/share/locale
-debian/tmp/usr/share/man
-debian/tmp/usr/share/omf/mdm
+debian/tmp/usr/share/help
 debian/tmp/usr/share/pixmaps
 debian/pam.d/* etc/pam.d/
 debian/mdm-conf.py usr/share/mdm/scripts/

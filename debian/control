@@ -26,7 +26,6 @@ Build-Depends: libpam0g-dev (>= 0.99.7.1),
                libxdmcp-dev,
                libxinerama-dev,
                libdmx-dev,
-               gnome-doc-utils,
                sharutils,
                gnome-pkg-tools,
                quilt,
@@ -36,8 +35,9 @@ Build-Depends: libpam0g-dev (>= 0.99.7.1),
                libwebkitgtk-dev (>= 1.3.10),
                gnome-common,
                libxml2-utils,
+	       yelp-tools,
                dh-systemd (>= 1.5)
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 
 Package: huayra-mdm
 Architecture: any
@@ -68,6 +68,8 @@ Conflicts: fast-user-switch-applet (<< 2.17.4),
            gdm,
            gdm3
 Description: MDM Display Manager
- MDM stands for MDM Display Manager (not Mint Display Manager and not MATE Display Manager) :)
+ MDM stands for MDM Display Manager 
+ (not Mint Display Manager and not MATE Display Manager) :)
  .
- It provides your system with a nice login screen which is easy to use, to configure and to theme.
+ It provides your system with a nice login screen which is easy
+ to use, to configure and to theme.

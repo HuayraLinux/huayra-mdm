@@ -1,3 +1,9 @@
+huayra-mdm (2.0.18-1) UNRELEASED; urgency=medium
+
+  * actualización a la version 2.0.18
+
+ -- Fernando Toledo <ragnarok@docksud.com.ar>  Mon, 28 Aug 2017 11:09:27 -0300
+
 huayra-mdm (2.0.7-1) unstable; urgency=medium
 
   * Nuevo release 2.0.7 de mdm

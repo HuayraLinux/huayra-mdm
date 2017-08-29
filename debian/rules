@@ -36,7 +36,6 @@ CFLAGS = `dpkg-buildflags --get CFLAGS`
 CFLAGS += `dpkg-buildflags --get CPPFLAGS`
 CFLAGS += -Wall -g -O$(if $(findstring noopt,$(DEB_BUILD_OPTIONS)),0,2)
 
-
 patch: patch-stamp
 patch-stamp:
 	dh_testdir
@@ -110,7 +109,7 @@ clean::
 	rm -f install-stamp build-stamp configure-stamp patch-stamp
 	dh_clean $(MANPAGES) \
 		po/*.gmo po/.intltool-merge-cache \
-		config/gnome.desktop config/CDE.desktop config/default.desktop
+		config/default.desktop
 
 %: %.pod
 	pod2man --section=$(shell echo $@ | sed 's/.*\.//') \

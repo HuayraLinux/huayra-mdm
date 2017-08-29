@@ -7,7 +7,7 @@
 
 set -e
 
-THIS_PACKAGE=mdm
+THIS_PACKAGE=huayra-mdm
 DEFAULT_DISPLAY_MANAGER_FILE=/etc/X11/default-display-manager
 
 if [ "$1" = "remove" -o "$1" = "deconfigure" ]; then

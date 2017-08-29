@@ -125,11 +125,15 @@ Description-zh_CN.UTF-8: 默认显示管理器：
 Template: mdm/autologin
 Type: boolean
 Default: true
-Description: Autologin en MDM
- Indique si desea entrar automaticamente.
+Description: MDM Autologin settings
+ Setup MDM autologin settings
+Description-es.UTF-8:
+ Indique si desea entrar automaticamente con un usuario especifico.
 
 Template: mdm/username
 Type: string
 Default: alumno
-Description: Nombre de usuario
+Description: Input username
+ Input the username for autologin
+Description-es.UTF-8: Nombre de usuario
  Ingrese el nombre de usuario para autologin
